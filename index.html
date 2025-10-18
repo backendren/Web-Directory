@@ -1,164 +1,125 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>网站收藏管理器</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>我的网站收藏 | 极致体验</title>
+  <meta name="description" content="纯前端网站收藏：IndexedDB 存储，搜索、分页、导出 Excel，移动端与桌面端自适应。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="./app.js" defer></script>
 </head>
 <body>
-    <!-- Header Section -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <h1 class="logo">
-                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    收藏管理器
-                </h1>
-
-                <!-- Search Bar -->
-                <div class="search-container">
-                    <div class="search-box">
-                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                        <input type="text" id="searchInput" class="search-input" placeholder="搜索网址、名称或标签...">
-                        <button id="searchBtn" class="search-btn">搜索</button>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="header-actions">
-                    <button id="addBtn" class="btn btn-primary">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        <span>添加网址</span>
-                    </button>
-                    <button id="exportBtn" class="btn btn-secondary">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        <span>导出Excel</span>
-                    </button>
-                </div>
-            </div>
+  <div class="app-shell">
+    <header class="app-header container">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-text">
+          <h1 class="title">我的收藏</h1>
+          <p class="subtitle">快速 · 优雅 · 安全</p>
         </div>
+      </div>
+      <div class="actions">
+        <div class="search-group">
+          <input id="searchInput" class="input" type="search" placeholder="搜索：网址 / 名称 / 标签" aria-label="搜索收藏" />
+          <button id="searchBtn" class="btn primary" aria-label="执行搜索">
+            <span class="btn-icon" aria-hidden="true">🔎</span>
+            <span class="btn-text">搜索</span>
+          </button>
+        </div>
+        <div class="toolbar">
+          <button id="addBtn" class="btn accent">
+            <span class="btn-icon" aria-hidden="true">＋</span>
+            <span class="btn-text">添加网址</span>
+          </button>
+          <button id="exportBtn" class="btn">
+            <span class="btn-icon" aria-hidden="true">⬇</span>
+            <span class="btn-text">导出网址</span>
+          </button>
+        </div>
+      </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <!-- Stats Overview -->
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <span class="stat-label">总收藏</span>
-                    <span id="totalCount" class="stat-value">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">当前显示</span>
-                    <span id="displayCount" class="stat-value">0</span>
-                </div>
-            </div>
+    <main class="container">
+      <section id="emptyState" class="empty hidden" aria-live="polite">
+        <div class="empty-illustration" aria-hidden="true"></div>
+        <h2>还没有收藏</h2>
+        <p>点击“添加网址”开始收集你的灵感与效率工具。</p>
+        <button id="emptyAddBtn" class="btn accent">添加第一个网址</button>
+      </section>
 
-            <!-- Bookmarks Grid -->
-            <div id="bookmarksContainer" class="bookmarks-grid"></div>
-
-            <!-- Empty State -->
-            <div id="emptyState" class="empty-state" style="display: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <h3>暂无收藏</h3>
-                <p>点击"添加网址"开始收藏您喜欢的网站</p>
-            </div>
-
-            <!-- Loading State -->
-            <div id="loadingState" class="loading-state">
-                <div class="spinner"></div>
-                <p>加载中...</p>
-            </div>
-        </div>
+      <section id="listSection" class="list-section">
+        <div id="listGrid" class="grid" role="list"></div>
+        <nav id="pagination" class="pagination" aria-label="分页"></nav>
+      </section>
     </main>
 
-    <!-- Pagination -->
-    <footer class="footer">
-        <div class="container">
-            <div id="pagination" class="pagination"></div>
-        </div>
+    <footer class="app-footer container">
+      <div>本地存储 · IndexedDB · 隐私友好</div>
+      <div>© <span id="year"></span> 我的收藏</div>
     </footer>
+  </div>
 
-    <!-- Modal -->
-    <div id="modal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">添加网址</h2>
-                <button class="modal-close" id="modalClose">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <form id="bookmarkForm" class="modal-body">
-                <input type="hidden" id="bookmarkId">
-
-                <div class="form-group">
-                    <label for="bookmarkName">网站名称 <span class="required">*</span></label>
-                    <input type="text" id="bookmarkName" class="form-control" placeholder="输入网站名称" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="bookmarkUrl">网址 <span class="required">*</span></label>
-                    <input type="url" id="bookmarkUrl" class="form-control" placeholder="https://example.com" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="bookmarkTags">分类标签</label>
-                    <input type="text" id="bookmarkTags" class="form-control" placeholder="多个标签用逗号分隔，如：工具,设计,开发">
-                    <small class="form-hint">用逗号、空格或分号分隔多个标签</small>
-                </div>
-
-                <div id="dateDisplay" class="form-group" style="display: none;">
-                    <label>添加日期</label>
-                    <input type="text" id="bookmarkDate" class="form-control" readonly>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-ghost" id="cancelBtn">取消</button>
-                    <button type="submit" class="btn btn-primary" id="saveBtn">保存</button>
-                </div>
-            </form>
+  <!-- Add/Edit Modal -->
+  <div id="modalAddEdit" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalAddEditTitle">
+    <div class="modal-backdrop" data-close="modal"></div>
+    <div class="modal-card" role="document">
+      <header class="modal-header">
+        <h3 id="modalAddEditTitle">添加网址</h3>
+        <button class="icon-btn" data-close="modal" aria-label="关闭">✕</button>
+      </header>
+      <form id="addEditForm" class="modal-body" novalidate>
+        <input type="hidden" id="f_id" />
+        <div class="field" id="idField" hidden>
+          <label for="f_id_display">ID</label>
+          <input id="f_id_display" class="input" type="text" readonly />
+          <small class="hint">自动生成，不可修改</small>
         </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2>确认删除</h2>
-            </div>
-            <div class="modal-body">
-                <p class="delete-message">确定要删除这个收藏吗？此操作无法撤销。</p>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-ghost" id="cancelDeleteBtn">取消</button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">删除</button>
-                </div>
-            </div>
+        <div class="field">
+          <label for="f_url">网址</label>
+          <input id="f_url" class="input" type="url" placeholder="例如：https://example.com" required />
+          <small class="hint">请输入以 http:// 或 https:// 开头的网址</small>
         </div>
+        <div class="field">
+          <label for="f_name">网站名称</label>
+          <input id="f_name" class="input" type="text" placeholder="网站名称" required />
+        </div>
+        <div class="field">
+          <label for="f_tags">分类标签</label>
+          <input id="f_tags" class="input" type="text" placeholder="用逗号分隔多个标签，如：工具, 编程" />
+        </div>
+        <div class="field" id="createdAtField" hidden>
+          <label for="f_createdAt">添加日期</label>
+          <input id="f_createdAt" class="input" type="text" placeholder="YYYY-MM-DD HH:mm" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-close="modal">取消</button>
+          <button type="submit" class="btn primary">保存</button>
+        </div>
+      </form>
     </div>
+  </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
-
-    <script src="script.js"></script>
+  <!-- Delete Confirm Modal -->
+  <div id="modalConfirm" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalConfirmTitle">
+    <div class="modal-backdrop" data-close="modal"></div>
+    <div class="modal-card" role="document">
+      <header class="modal-header">
+        <h3 id="modalConfirmTitle">确认删除</h3>
+        <button class="icon-btn" data-close="modal" aria-label="关闭">✕</button>
+      </header>
+      <div class="modal-body">
+        <p>删除后不可恢复，确定要删除这条记录吗？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-close="modal">取消</button>
+        <button id="confirmDeleteBtn" type="button" class="btn danger">确认删除</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
